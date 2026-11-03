@@ -48,7 +48,7 @@ The access key needs management permissions. `api_key` overrides `MERGEAH_API_KE
 
 API URLs must use HTTPS. HTTP is accepted only for literal loopback IP addresses, such as `127.0.0.1` or `::1`, for local fixtures.
 
-The provider has not been published. Use a local development override until a signed release is available.
+The provider has not been published. Use a local development override until a signed release is available. Releases are built by `.github/workflows/release.yml` when a `v*` tag is pushed, and published to the Terraform Registry as `bogware/mergeah`.
 
 ## Coverage
 
