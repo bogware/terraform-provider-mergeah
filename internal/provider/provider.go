@@ -1,109 +1,89 @@
-// Copyright IBM Corp. 2021, 2025
-// SPDX-License-Identifier: MPL-2.0
-
+// Copyright (c) Bogware. SPDX-License-Identifier: MPL-2.0
 package provider
 
 import (
 	"context"
-	"net/http"
+	"os"
+	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/action"
+	"github.com/bogware/terraform-provider-mergeah/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
-	"github.com/hashicorp/terraform-plugin-framework/function"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// Ensure ScaffoldingProvider satisfies various provider interfaces.
-var _ provider.Provider = &ScaffoldingProvider{}
-var _ provider.ProviderWithFunctions = &ScaffoldingProvider{}
-var _ provider.ProviderWithEphemeralResources = &ScaffoldingProvider{}
-var _ provider.ProviderWithActions = &ScaffoldingProvider{}
-
-// ScaffoldingProvider defines the provider implementation.
-type ScaffoldingProvider struct {
-	// version is set to the provider version on release, "dev" when the
-	// provider is built and ran locally, and "test" when running acceptance
-	// testing.
-	version string
+type MergeAHProvider struct{ version string }
+type providerModel struct {
+	APIKey types.String `tfsdk:"api_key"`
+	APIURL types.String `tfsdk:"api_url"`
 }
 
-// ScaffoldingProviderModel describes the provider data model.
-type ScaffoldingProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
-}
+var _ provider.Provider = &MergeAHProvider{}
 
-func (p *ScaffoldingProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "scaffolding"
+func New(version string) func() provider.Provider {
+	return func() provider.Provider { return &MergeAHProvider{version: version} }
+}
+func (p *MergeAHProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "mergeah"
 	resp.Version = p.version
 }
-
-func (p *ScaffoldingProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Example provider attribute",
-				Optional:            true,
-			},
-		},
-	}
+func (p *MergeAHProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
+	resp.Schema = schema.Schema{MarkdownDescription: "Manage the Merge Agent Handler management plane.", Attributes: map[string]schema.Attribute{
+		"api_key": schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "Merge access key. Defaults to MERGEAH_API_KEY. Requires management permissions."},
+		"api_url": schema.StringAttribute{Optional: true, MarkdownDescription: "API base URL including /api/v1. Defaults to MERGEAH_API_URL, then https://ah-api.merge.dev/api/v1. For EU use https://ah-api-eu.merge.dev/api/v1. HTTPS is required except for loopback IP addresses used by local fixtures."},
+	}}
 }
-
-func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data ScaffoldingProviderModel
-
+func (p *MergeAHProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var data providerModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
-
-	// Example client configuration for data sources and resources
-	client := http.DefaultClient
-	resp.DataSourceData = client
-	resp.ResourceData = client
-}
-
-func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewExampleResource,
-	}
-}
-
-func (p *ScaffoldingProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
-	return []func() ephemeral.EphemeralResource{
-		NewExampleEphemeralResource,
-	}
-}
-
-func (p *ScaffoldingProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewExampleDataSource,
-	}
-}
-
-func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.Function {
-	return []func() function.Function{
-		NewExampleFunction,
-	}
-}
-
-func (p *ScaffoldingProvider) Actions(ctx context.Context) []func() action.Action {
-	return []func() action.Action{
-		NewExampleAction,
-	}
-}
-
-func New(version string) func() provider.Provider {
-	return func() provider.Provider {
-		return &ScaffoldingProvider{
-			version: version,
+	for name, v := range map[string]types.String{"api_key": data.APIKey, "api_url": data.APIURL} {
+		if v.IsUnknown() {
+			resp.Diagnostics.AddAttributeError(path.Root(name), "Unknown provider configuration", name+" must be known before configuring the provider.")
 		}
 	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	key := os.Getenv("MERGEAH_API_KEY")
+	if !data.APIKey.IsNull() {
+		key = data.APIKey.ValueString()
+	}
+	if strings.TrimSpace(key) == "" {
+		resp.Diagnostics.AddAttributeError(path.Root("api_key"), "Missing access key", "Set api_key or MERGEAH_API_KEY.")
+		return
+	}
+	base := os.Getenv("MERGEAH_API_URL")
+	if base == "" {
+		base = client.DefaultURL
+	}
+	if !data.APIURL.IsNull() {
+		base = data.APIURL.ValueString()
+	}
+	c, err := client.New(base, key, p.version)
+	if err != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("api_url"), "Invalid API URL", err.Error())
+		return
+	}
+	resp.ResourceData = c
+	resp.DataSourceData = c
+}
+func (p *MergeAHProvider) Resources(_ context.Context) []func() resource.Resource {
+	out := []func() resource.Resource{}
+	for _, s := range resourceSpecs() {
+		out = append(out, func() resource.Resource { return &managementResource{spec: s} })
+	}
+	return out
+}
+func (p *MergeAHProvider) DataSources(_ context.Context) []func() datasource.DataSource {
+	out := []func() datasource.DataSource{}
+	for _, s := range dataSpecs() {
+		out = append(out, func() datasource.DataSource { return &managementDataSource{spec: s} })
+	}
+	return out
 }

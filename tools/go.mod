@@ -3,7 +3,6 @@ module tools
 go 1.25.8
 
 require (
-	github.com/hashicorp/copywrite v0.22.0
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 )
 
@@ -88,3 +87,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
