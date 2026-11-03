@@ -27,11 +27,11 @@ locals {
 
 ### Optional
 
-- `created_after` (String) Merge API field `created_after`.
-- `created_before` (String) Merge API field `created_before`.
-- `event_type` (String) Merge API field `event_type`.
+- `created_after` (String) Only records created at or after this ISO 8601 timestamp.
+- `created_before` (String) Only records created at or before this ISO 8601 timestamp.
+- `event_type` (String) Filter by audit event type.
 - `query` (Map of String) Additional documented API query parameters. All pages are fetched automatically. Values must be strings.
-- `user_id` (String) Merge API field `user_id`.
+- `user_id` (String) Filter by the ID of the user who performed the action.
 
 ### Read-Only
 

@@ -18,6 +18,8 @@ type field struct {
 	Default                                               any
 	Enum                                                  []string
 	AllowEmpty, Stable                                    bool
+	// Query is the API query parameter name when it differs from Name (data sources only).
+	Query string
 }
 
 func str(name string, required bool) field {
@@ -52,6 +54,8 @@ func createOmit(f field) field             { f.CreateOmit = true; return f }
 func jsonField(f field) field              { f.JSON = true; return f }
 func enum(f field, values ...string) field { f.Enum = values; return f }
 func defaulted(f field, v any) field       { f.Default = v; return f }
+func describe(f field, d string) field     { f.Description = d; return f }
+func queryAs(f field, name string) field   { f.Query = name; return f }
 func object(name string, required bool, children ...field) field {
 	f := str(name, required)
 	f.Children = children
@@ -120,27 +124,79 @@ func dataSpecs() []dataSpec {
 	add := func(name, endpoint string, list bool, fields ...field) {
 		out = append(out, dataSpec{Name: name, Endpoint: endpoint, List: list, Fields: fields, Description: "Read Merge Agent Handler " + name + ". Results are available as JSON via response_json; paginated collections are fetched completely."})
 	}
-	add("connector", "connectors/{slug}/", false, str("slug", true), boolean("include_tool_details", false), str("auth_mode", false))
-	add("connectors", "connectors/", true, str("search", false))
-	for _, pair := range []struct{ single, plural, endpoint string }{{"tool_pack", "tool_packs", "tool-packs/"}, {"registered_user", "registered_users", "registered-users/"}, {"application_credential", "application_credentials", "application-credentials/"}, {"access_key", "access_keys", "access-keys/"}, {"connection", "connections", "connections/"}, {"custom_regex_rule", "custom_regex_rules", "security/custom-regex-rules/"}} {
-		add(pair.single, pair.endpoint+"{resource_id}/", false, str("resource_id", true))
-		add(pair.plural, pair.endpoint, true)
+	// Filter descriptions follow the Merge Agent Handler OpenAPI parameter documentation.
+	d := func(name string, required bool, text string) field { return describe(str(name, required), text) }
+	b := func(name, text string) field { return describe(boolean(name, false), text) }
+	toolPackID := d("tool_pack_id", true, "Agent Handler ID of the Tool Pack.")
+	entityType := d("entity_type", true, "Standard entity type, for example `EMAIL_ADDRESS`.")
+	definedAt := d("defined_at", false, "Filter by where the rule is defined: `ORGANIZATION` or `TOOL_PACK`.")
+	overrideSlug := queryAs(d("connector_slug", false, "Filter by connector slug. Sent to the API as the `slug` query parameter."), "slug")
+	createdAfter := d("created_after", false, "Only records created at or after this ISO 8601 timestamp.")
+	createdBefore := d("created_before", false, "Only records created at or before this ISO 8601 timestamp.")
+	logCreatedAfter := d("created_after", false, "Only logs at or after this ISO 8601 timestamp. Merge clamps older values to the last 30 days.")
+	logCreatedBefore := d("created_before", false, "Only logs at or before this ISO 8601 timestamp.")
+	connectorID := d("connector_id", false, "Filter by connector ID.")
+	startTime := d("start_time", true, "Start of the usage window, ISO 8601 with timezone (for example `2026-04-01T00:00:00Z`). Cannot be more than 90 days in the past, and the window cannot exceed 31 days.")
+	endTime := d("end_time", true, "End of the usage window, ISO 8601 with timezone (for example `2026-04-30T00:00:00Z`). Must be in the past.")
+
+	add("connector", "connectors/{slug}/", false, d("slug", true, "Connector slug, for example `linear`."), b("include_tool_details", "When true, tools include `input_schema`, `output_schema`, and `annotations`."), d("auth_mode", false, "Set to `runtime` to return `credential_fields` instead of full `auth_options`."))
+	add("connectors", "connectors/", true, d("search", false, "Case-insensitive filter across connector name and slug."))
+	for _, pair := range []struct {
+		single, plural, endpoint, noun string
+		filters                        []field
+	}{
+		{"tool_pack", "tool_packs", "tool-packs/", "Tool Pack", nil},
+		{"registered_user", "registered_users", "registered-users/", "Registered User", []field{
+			d("origin_user_id", false, "Filter by the origin user ID of the Registered User."),
+			b("is_test", "When true, return only test users; when false, return only production users. Overrides the access-key default."),
+			b("include_test_users", "When true, return both test and production users. Ignored when `is_test` is set."),
+		}},
+		{"application_credential", "application_credentials", "application-credentials/", "application credential", []field{
+			d("slug", false, "Filter by connector slug."),
+			d("external_id", false, "Filter by external ID."),
+		}},
+		{"access_key", "access_keys", "access-keys/", "access key", nil},
+		{"connection", "connections", "connections/", "Connection", []field{
+			d("connector", false, "Filter by connector slug."),
+			d("status", false, "Filter by status: `ACTIVE` or `ERROR`. `ERROR` surfaces connections retired after a terminal authentication failure. Accepts a comma-separated list."),
+			d("auth_scope", false, "Filter by auth scope: `INDIVIDUAL`, `SHARED`, or `ORGANIZATION`. Accepts a comma-separated list."),
+			d("company", false, "Filter shared connections by company origin ID."),
+			d("created_at_after", false, "Only connections created at or after this ISO 8601 timestamp."),
+			d("created_at_before", false, "Only connections created at or before this ISO 8601 timestamp."),
+		}},
+		{"custom_regex_rule", "custom_regex_rules", "security/custom-regex-rules/", "organization custom regex rule", nil},
+	} {
+		add(pair.single, pair.endpoint+"{resource_id}/", false, d("resource_id", true, "Agent Handler ID of the "+pair.noun+"."))
+		add(pair.plural, pair.endpoint, true, pair.filters...)
 	}
-	add("tool_pack_connectors", "tool-packs/{tool_pack_id}/connectors/", true, str("tool_pack_id", true))
-	add("connector_tool_description_overrides", "connectors/tool-description-overrides/", true, str("connector_slug", false))
-	add("tool_pack_tool_description_overrides", "tool-packs/{tool_pack_id}/tool-description-overrides/", true, str("tool_pack_id", true), str("connector_slug", false))
-	add("standard_entity_rule", "security/standard-entity-rules/{entity_type}/", false, str("entity_type", true))
+	add("tool_pack_connectors", "tool-packs/{tool_pack_id}/connectors/", true, toolPackID)
+	add("connector_tool_description_overrides", "connectors/tool-description-overrides/", true, overrideSlug)
+	add("tool_pack_tool_description_overrides", "tool-packs/{tool_pack_id}/tool-description-overrides/", true, toolPackID, overrideSlug)
+	add("standard_entity_rule", "security/standard-entity-rules/{entity_type}/", false, entityType)
 	add("standard_entity_rules", "security/standard-entity-rules/", true)
-	add("tool_pack_standard_entity_rule", "tool-packs/{tool_pack_id}/standard-entity-rules/{entity_type}/", false, str("tool_pack_id", true), str("entity_type", true))
-	add("tool_pack_standard_entity_rules", "tool-packs/{tool_pack_id}/standard-entity-rules/", true, str("tool_pack_id", true))
-	add("tool_pack_custom_regex_rule", "tool-packs/{tool_pack_id}/custom-regex-rules/{resource_id}/", false, str("tool_pack_id", true), str("resource_id", true))
-	add("tool_pack_custom_regex_rules", "tool-packs/{tool_pack_id}/custom-regex-rules/", true, str("tool_pack_id", true))
-	add("audit_log", "audit-log/", true, str("created_after", false), str("created_before", false), str("event_type", false), str("user_id", false))
-	add("api_request_logs", "logs/api-calls/", true, str("connector_id", false), str("created_after", false), str("created_before", false), str("method", false), str("response_status", false), str("toolcall_id", false))
-	add("tool_call_logs", "logs/tool-calls/", true, str("connector_id", false), str("created_after", false), str("created_before", false), str("status", false), str("tool_name", false), str("client_trace_id", false), str("error_reason", false), str("turn_id", false))
-	add("usage", "usage/", false, str("start_time", true), str("end_time", true))
-	add("registered_user_usage", "usage/registered-users/{registered_user_id}/", false, str("registered_user_id", true), str("start_time", true), str("end_time", true))
-	add("usage_by_registered_user", "usage/registered-users/", true, str("start_time", true), str("end_time", true))
-	add("usage_by_tool", "usage/tools/", true, str("start_time", true), str("end_time", true))
+	add("tool_pack_standard_entity_rule", "tool-packs/{tool_pack_id}/standard-entity-rules/{entity_type}/", false, toolPackID, entityType)
+	add("tool_pack_standard_entity_rules", "tool-packs/{tool_pack_id}/standard-entity-rules/", true, toolPackID, definedAt)
+	add("tool_pack_custom_regex_rule", "tool-packs/{tool_pack_id}/custom-regex-rules/{resource_id}/", false, toolPackID, d("resource_id", true, "Agent Handler ID of the custom regex rule."))
+	add("tool_pack_custom_regex_rules", "tool-packs/{tool_pack_id}/custom-regex-rules/", true, toolPackID, definedAt)
+	add("tool_access_request", "tool-access-requests/{resource_id}/", false, d("resource_id", true, "Agent Handler ID of the tool access request."))
+	add("tool_access_requests", "tool-access-requests/", true,
+		d("registered_user_id", false, "Filter to one Registered User's requests."),
+		d("search", false, "Case-insensitive match on requester name, reason, decision note, tool slug, or connector name."),
+		d("status", false, "Filter by status: `pending`, `approved`, `denied`, `revoked`, `canceled`, or `expired`. `approved` returns only approvals that have not expired; `expired` returns approvals whose expiry has passed."))
+	add("audit_log", "audit-log/", true, createdAfter, createdBefore, d("event_type", false, "Filter by audit event type."), d("user_id", false, "Filter by the ID of the user who performed the action."))
+	add("api_request_logs", "logs/api-calls/", true, connectorID, logCreatedAfter, logCreatedBefore,
+		d("method", false, "Filter by HTTP method: `GET`, `POST`, `PUT`, `PATCH`, or `DELETE`."),
+		d("response_status", false, "Filter by HTTP response status code, for example `500`."),
+		d("toolcall_id", false, "Filter by the originating tool call ID."))
+	add("tool_call_logs", "logs/tool-calls/", true, connectorID, logCreatedAfter, logCreatedBefore,
+		d("status", false, "Filter by execution status."),
+		d("tool_name", false, "Filter by tool name (partial match)."),
+		d("client_trace_id", false, "Exact match on the caller's W3C traceparent trace ID (32 hex characters)."),
+		d("error_reason", false, "Exact match on why execution failed, for example `tool_execution_error`, `reauth_required`, or `blocked_by_security_rule`."),
+		d("turn_id", false, "Exact match on the agent turn ID (the caller's `X-Merge-Turn-Id`)."))
+	add("usage", "usage/", false, startTime, endTime)
+	add("registered_user_usage", "usage/registered-users/{registered_user_id}/", false, d("registered_user_id", true, "Agent Handler ID of the Registered User."), startTime, endTime)
+	add("usage_by_registered_user", "usage/registered-users/", true, startTime, endTime)
+	add("usage_by_tool", "usage/tools/", true, startTime, endTime)
 	return out
 }

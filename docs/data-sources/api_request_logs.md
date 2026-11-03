@@ -27,13 +27,13 @@ locals {
 
 ### Optional
 
-- `connector_id` (String) Merge API field `connector_id`.
-- `created_after` (String) Merge API field `created_after`.
-- `created_before` (String) Merge API field `created_before`.
-- `method` (String) Merge API field `method`.
+- `connector_id` (String) Filter by connector ID.
+- `created_after` (String) Only logs at or after this ISO 8601 timestamp. Merge clamps older values to the last 30 days.
+- `created_before` (String) Only logs at or before this ISO 8601 timestamp.
+- `method` (String) Filter by HTTP method: `GET`, `POST`, `PUT`, `PATCH`, or `DELETE`.
 - `query` (Map of String) Additional documented API query parameters. All pages are fetched automatically. Values must be strings.
-- `response_status` (String) Merge API field `response_status`.
-- `toolcall_id` (String) Merge API field `toolcall_id`.
+- `response_status` (String) Filter by HTTP response status code, for example `500`.
+- `toolcall_id` (String) Filter by the originating tool call ID.
 
 ### Read-Only
 

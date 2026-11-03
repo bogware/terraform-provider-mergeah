@@ -29,8 +29,8 @@ locals {
 
 ### Required
 
-- `entity_type` (String) Merge API field `entity_type`.
-- `tool_pack_id` (String) Merge API field `tool_pack_id`.
+- `entity_type` (String) Standard entity type, for example `EMAIL_ADDRESS`.
+- `tool_pack_id` (String) Agent Handler ID of the Tool Pack.
 
 ### Optional
 

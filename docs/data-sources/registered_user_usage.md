@@ -30,9 +30,9 @@ locals {
 
 ### Required
 
-- `end_time` (String) Merge API field `end_time`.
-- `registered_user_id` (String) Merge API field `registered_user_id`.
-- `start_time` (String) Merge API field `start_time`.
+- `end_time` (String) End of the usage window, ISO 8601 with timezone (for example `2026-04-30T00:00:00Z`). Must be in the past.
+- `registered_user_id` (String) Agent Handler ID of the Registered User.
+- `start_time` (String) Start of the usage window, ISO 8601 with timezone (for example `2026-04-01T00:00:00Z`). Cannot be more than 90 days in the past, and the window cannot exceed 31 days.
 
 ### Optional
 

@@ -27,7 +27,9 @@ locals {
 
 ### Optional
 
+- `external_id` (String) Filter by external ID.
 - `query` (Map of String) Additional documented API query parameters. All pages are fetched automatically. Values must be strings.
+- `slug` (String) Filter by connector slug.
 
 ### Read-Only
 

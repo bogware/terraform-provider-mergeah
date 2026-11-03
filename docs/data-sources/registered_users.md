@@ -27,6 +27,9 @@ locals {
 
 ### Optional
 
+- `include_test_users` (Boolean) When true, return both test and production users. Ignored when `is_test` is set.
+- `is_test` (Boolean) When true, return only test users; when false, return only production users. Overrides the access-key default.
+- `origin_user_id` (String) Filter by the origin user ID of the Registered User.
 - `query` (Map of String) Additional documented API query parameters. All pages are fetched automatically. Values must be strings.
 
 ### Read-Only

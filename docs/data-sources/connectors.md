@@ -28,7 +28,7 @@ locals {
 ### Optional
 
 - `query` (Map of String) Additional documented API query parameters. All pages are fetched automatically. Values must be strings.
-- `search` (String) Merge API field `search`.
+- `search` (String) Case-insensitive filter across connector name and slug.
 
 ### Read-Only
 

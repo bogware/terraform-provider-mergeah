@@ -29,8 +29,8 @@ locals {
 
 ### Required
 
-- `resource_id` (String) Merge API field `resource_id`.
-- `tool_pack_id` (String) Merge API field `tool_pack_id`.
+- `resource_id` (String) Agent Handler ID of the custom regex rule.
+- `tool_pack_id` (String) Agent Handler ID of the Tool Pack.
 
 ### Optional
 

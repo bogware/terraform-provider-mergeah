@@ -5,9 +5,9 @@ description: "Management API coverage, ownership, and drift limitations."
 
 # Management API coverage and lifecycle
 
-The provider manages the Merge Agent Handler management REST API. It includes 14 resources and 30 data sources; resource and data source pages contain schemas, examples, and import instructions.
+The provider manages the Merge Agent Handler management REST API. It includes 14 resources and 32 data sources; resource and data source pages contain schemas, examples, and import instructions.
 
-Managed families include Tool Packs and connector membership, Registered Users, OAuth application credentials, access keys, remote MCP registrations, connection exclusions, tool description overrides, and standard entity/custom regex rules at organization and Tool Pack scope. Read-only data sources also expose connector discovery, usage, audit events, and API/tool logs.
+Managed families include Tool Packs and connector membership, Registered Users, OAuth application credentials, access keys, remote MCP registrations, connection exclusions, tool description overrides, and standard entity/custom regex rules at organization and Tool Pack scope. Read-only data sources also expose connector discovery, tool access requests, usage, audit events, and API/tool logs.
 
 Data sources expose sensitive `response_json`. Detail endpoints return objects; collection endpoints return arrays aggregated across all pages. Collection envelope metadata is not retained. Use `jsondecode` to access fields and the `query` map for additional documented filters. Log endpoints require the corresponding Merge plan.
 
@@ -42,7 +42,7 @@ A lost response, invalid JSON, or missing identifier can prevent recovery. Befor
 
 ## Excluded operations and validation
 
-Short-lived Link tokens, signup/claim-link issuance, file transfer, MCP tool execution/search, credential deletion, connection revocation, and access-key regeneration are runtime operations without independent declarative lifecycles. They are not stateful resources or read-only management data sources. Rotate managed keys through resource replacement. Establish user connections through Merge Link or external OAuth workflows.
+Short-lived Link tokens, signup/claim-link issuance, file transfer, MCP tool execution/search, credential deletion, connection revocation, access-key regeneration, and tool access request review (approve, deny, or revoke) are runtime operations without independent declarative lifecycles. They are not stateful resources or read-only management data sources. Rotate managed keys through resource replacement. Establish user connections through Merge Link or external OAuth workflows.
 
 Tests use sanitized local HTTP fixtures and the real Terraform CLI. They require no Merge credentials or live operations. No live Merge account has been validated. Before production use, validate with a dedicated test key and disposable resources; remote MCP registration contacts the remote server. Review cleanup requirements, including settings deliberately retained on destroy.
 

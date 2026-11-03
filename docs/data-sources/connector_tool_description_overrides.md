@@ -27,7 +27,7 @@ locals {
 
 ### Optional
 
-- `connector_slug` (String) Merge API field `connector_slug`.
+- `connector_slug` (String) Filter by connector slug. Sent to the API as the `slug` query parameter.
 - `query` (Map of String) Additional documented API query parameters. All pages are fetched automatically. Values must be strings.
 
 ### Read-Only

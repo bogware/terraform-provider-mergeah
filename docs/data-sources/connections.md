@@ -27,7 +27,13 @@ locals {
 
 ### Optional
 
+- `auth_scope` (String) Filter by auth scope: `INDIVIDUAL`, `SHARED`, or `ORGANIZATION`. Accepts a comma-separated list.
+- `company` (String) Filter shared connections by company origin ID.
+- `connector` (String) Filter by connector slug.
+- `created_at_after` (String) Only connections created at or after this ISO 8601 timestamp.
+- `created_at_before` (String) Only connections created at or before this ISO 8601 timestamp.
 - `query` (Map of String) Additional documented API query parameters. All pages are fetched automatically. Values must be strings.
+- `status` (String) Filter by status: `ACTIVE` or `ERROR`. `ERROR` surfaces connections retired after a terminal authentication failure. Accepts a comma-separated list.
 
 ### Read-Only
 

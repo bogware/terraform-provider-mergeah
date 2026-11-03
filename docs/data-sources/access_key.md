@@ -28,7 +28,7 @@ locals {
 
 ### Required
 
-- `resource_id` (String) Merge API field `resource_id`.
+- `resource_id` (String) Agent Handler ID of the access key.
 
 ### Optional
 

@@ -25,7 +25,7 @@ func TestProviderSchema(t *testing.T) {
 			t.Fatalf("%s: %s", d.Summary, d.Detail)
 		}
 	}
-	if len(resp.ResourceSchemas) != 14 || len(resp.DataSourceSchemas) != 30 {
+	if len(resp.ResourceSchemas) != 14 || len(resp.DataSourceSchemas) != 32 {
 		t.Fatalf("unexpected schema count: %d resources, %d data sources", len(resp.ResourceSchemas), len(resp.DataSourceSchemas))
 	}
 }

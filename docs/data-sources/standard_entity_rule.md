@@ -28,7 +28,7 @@ locals {
 
 ### Required
 
-- `entity_type` (String) Merge API field `entity_type`.
+- `entity_type` (String) Standard entity type, for example `EMAIL_ADDRESS`.
 
 ### Optional
 
