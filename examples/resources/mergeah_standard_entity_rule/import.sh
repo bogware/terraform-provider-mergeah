@@ -1,0 +1,1 @@
+terraform import mergeah_standard_entity_rule.example 'EMAIL_ADDRESS'
