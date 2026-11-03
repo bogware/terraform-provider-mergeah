@@ -11,3 +11,6 @@ vet:
 
 generate:
 	cd tools && go generate -tags generate .
+
+api-coverage:
+	go run ./cmd/check-api-coverage
