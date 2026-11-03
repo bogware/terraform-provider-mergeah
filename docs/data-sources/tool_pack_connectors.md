@@ -28,7 +28,7 @@ locals {
 
 ### Required
 
-- `tool_pack_id` (String) Merge API field `tool_pack_id`.
+- `tool_pack_id` (String) Agent Handler ID of the Tool Pack.
 
 ### Optional
 

@@ -85,14 +85,18 @@ func (d *managementDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			resp.Diagnostics.AddError("Unknown filter", e.Error())
 			return
 		}
+		name := f.Name
+		if f.Query != "" {
+			name = f.Query
+		}
 		switch x := v.(type) {
 		case string:
-			q.Set(f.Name, x)
+			q.Set(name, x)
 		case bool:
 			if x {
-				q.Set(f.Name, "true")
+				q.Set(name, "true")
 			} else {
-				q.Set(f.Name, "false")
+				q.Set(name, "false")
 			}
 		}
 	}

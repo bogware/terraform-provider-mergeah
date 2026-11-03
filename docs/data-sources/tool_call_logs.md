@@ -27,15 +27,15 @@ locals {
 
 ### Optional
 
-- `client_trace_id` (String) Merge API field `client_trace_id`.
-- `connector_id` (String) Merge API field `connector_id`.
-- `created_after` (String) Merge API field `created_after`.
-- `created_before` (String) Merge API field `created_before`.
-- `error_reason` (String) Merge API field `error_reason`.
+- `client_trace_id` (String) Exact match on the caller's W3C traceparent trace ID (32 hex characters).
+- `connector_id` (String) Filter by connector ID.
+- `created_after` (String) Only logs at or after this ISO 8601 timestamp. Merge clamps older values to the last 30 days.
+- `created_before` (String) Only logs at or before this ISO 8601 timestamp.
+- `error_reason` (String) Exact match on why execution failed, for example `tool_execution_error`, `reauth_required`, or `blocked_by_security_rule`.
 - `query` (Map of String) Additional documented API query parameters. All pages are fetched automatically. Values must be strings.
-- `status` (String) Merge API field `status`.
-- `tool_name` (String) Merge API field `tool_name`.
-- `turn_id` (String) Merge API field `turn_id`.
+- `status` (String) Filter by execution status.
+- `tool_name` (String) Filter by tool name (partial match).
+- `turn_id` (String) Exact match on the agent turn ID (the caller's `X-Merge-Turn-Id`).
 
 ### Read-Only
 

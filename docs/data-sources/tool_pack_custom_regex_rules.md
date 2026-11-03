@@ -28,10 +28,11 @@ locals {
 
 ### Required
 
-- `tool_pack_id` (String) Merge API field `tool_pack_id`.
+- `tool_pack_id` (String) Agent Handler ID of the Tool Pack.
 
 ### Optional
 
+- `defined_at` (String) Filter by where the rule is defined: `ORGANIZATION` or `TOOL_PACK`.
 - `query` (Map of String) Additional documented API query parameters. All pages are fetched automatically. Values must be strings.
 
 ### Read-Only

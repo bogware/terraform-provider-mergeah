@@ -52,7 +52,7 @@ The provider has not been published. Use a local development override until a si
 
 ## Coverage
 
-Fourteen resources cover Tool Packs, authoritative and individual connector membership, Registered Users, OAuth application credentials, access keys, remote MCP connectors, connector and Tool Pack tool description overrides, organization and Tool Pack custom regex rules, organization and Tool Pack standard entity settings, and connection exclusions. Thirty data sources cover detail/list endpoints, connector discovery, security rules, usage, audit events, and API/tool logs. See [API coverage and lifecycle behavior](docs/guides/coverage.md).
+Fourteen resources cover Tool Packs, authoritative and individual connector membership, Registered Users, OAuth application credentials, access keys, remote MCP connectors, connector and Tool Pack tool description overrides, organization and Tool Pack custom regex rules, organization and Tool Pack standard entity settings, and connection exclusions. Thirty-two data sources cover detail/list endpoints, connector discovery, tool access requests, security rules, usage, audit events, and API/tool logs. See [API coverage and lifecycle behavior](docs/guides/coverage.md).
 
 Use `mergeah_tool_pack_connector` when separate resources or modules should own individual connectors. Each resource manages one `tool_pack_id`/`slug` pair and detaches only that connector on destroy. Do not use it alongside `mergeah_tool_pack_connectors` for the same Tool Pack, because the latter owns the entire list. For example, as an alternative to the membership resource above:
 

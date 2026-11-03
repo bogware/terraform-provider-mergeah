@@ -28,12 +28,12 @@ locals {
 
 ### Required
 
-- `slug` (String) Merge API field `slug`.
+- `slug` (String) Connector slug, for example `linear`.
 
 ### Optional
 
-- `auth_mode` (String) Merge API field `auth_mode`.
-- `include_tool_details` (Boolean) Merge API field `include_tool_details`.
+- `auth_mode` (String) Set to `runtime` to return `credential_fields` instead of full `auth_options`.
+- `include_tool_details` (Boolean) When true, tools include `input_schema`, `output_schema`, and `annotations`.
 - `query` (Map of String) Additional documented API query parameters. All pages are fetched automatically. Values must be strings.
 
 ### Read-Only
