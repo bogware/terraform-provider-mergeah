@@ -4,7 +4,9 @@
 
 The Go module is `github.com/bogware/terraform-provider-mergeah`, with Terraform source address `bogware/mergeah`. The provider uses Terraform Plugin Framework v1.19.0 and requires Go 1.25.8 or newer. No Git repository has been initialized by the agent.
 
-`main.go` serves the provider. `internal/client/` contains HTTP transport and pagination; `internal/provider/` contains configuration, declarative API/schema specifications, lifecycle handling, data sources, and colocated tests. `examples/` contains Terraform examples and import commands; `docs/` contains generated reference pages and lifecycle guidance. `cmd/` contains example/schema generators and the API coverage checker, and the separate `tools/` Go module pins tfplugindocs. `.github/workflows/` contains CI, while `.goreleaser.yml` configures draft release artifacts.
+`main.go` serves the provider. `internal/client/` contains HTTP transport and pagination; `internal/provider/` contains configuration, declarative API/schema specifications, lifecycle handling, data sources, and colocated tests. `examples/` contains Terraform examples and import commands; `docs/` contains generated reference pages and lifecycle guidance. `cmd/` contains example/schema generators and the API coverage checker, and the separate `tools/` Go module pins tfplugindocs. `.github/workflows/` contains CI, the weekly API coverage check, and the release workflow; `.goreleaser.yml` configures signed release artifacts for the Terraform Registry.
+
+Releases: pushing a `v*` tag runs `.github/workflows/release.yml`, which builds and GPG-signs binaries with GoReleaser v2 and publishes a GitHub release that the Registry picks up through its webhook. It needs the `GPG_PRIVATE_KEY` and `PASSPHRASE` repository secrets. Update `CHANGELOG.md` and run `make api-coverage` before tagging. Tag or publish only when the user asks.
 
 ## Build, Test, and Development Commands
 
