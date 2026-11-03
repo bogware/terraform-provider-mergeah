@@ -1,0 +1,91 @@
+name: API coverage
+
+# Weekly comparison of the provider with Merge's published OpenAPI spec.
+# Gaps open (or update) one tracking issue instead of failing pull requests.
+# The issue is closed automatically once a run finds no gaps.
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Mondays 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: api-coverage
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Build the coverage checker
+        run: go build -o "$RUNNER_TEMP/check-api-coverage" ./cmd/check-api-coverage
+
+      - name: Compare provider with the OpenAPI spec
+        id: check
+        run: |
+          set +e
+          "$RUNNER_TEMP/check-api-coverage" > report.txt 2>&1
+          status=$?
+          set -e
+          cat report.txt
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          # 0 = no gaps, 1 = gaps found. Anything else (spec download or
+          # parse failure, build error) fails the run without touching issues.
+          if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then
+            echo "::error::Coverage check could not run (exit $status)."
+            exit "$status"
+          fi
+
+      - name: Open, update, or close the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS: ${{ steps.check.outputs.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="API coverage gaps against the Merge OpenAPI spec"
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title \
+            --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+
+          if [ "$STATUS" = "0" ]; then
+            if [ -n "$existing" ]; then
+              gh issue close "$existing" --comment "Resolved: the weekly check found no coverage gaps. ([run]($RUN_URL))"
+            fi
+            exit 0
+          fi
+
+          # Post only when the findings change, so an unchanged gap does not
+          # add a comment every week.
+          marker="<!-- api-coverage-report: $(sha256sum report.txt | cut -c1-16) -->"
+          if [ -n "$existing" ]; then
+            history=$(gh issue view "$existing" --json body,comments --jq '([.body] + [.comments[].body]) | join("\n")')
+            if grep -qF "$marker" <<< "$history"; then
+              echo "Findings unchanged since the last report on #$existing."
+              exit 0
+            fi
+          fi
+
+          {
+            echo "$marker"
+            echo "The weekly \`check-api-coverage\` run found differences between the provider and Merge's published Agent Handler OpenAPI spec. ([run]($RUN_URL))"
+            echo
+            echo '```'
+            cat report.txt
+            echo '```'
+            echo
+            echo "For each finding, either add support in the provider or record a deliberate exclusion with a reason in \`cmd/check-api-coverage/main.go\`. Reproduce locally with \`go run ./cmd/check-api-coverage -v\`."
+          } > body.md
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file body.md
+          else
+            gh issue create --title "$title" --body-file body.md
+          fi
