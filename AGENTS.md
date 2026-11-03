@@ -4,7 +4,7 @@
 
 The Go module is `github.com/bogware/terraform-provider-mergeah`, with Terraform source address `bogware/mergeah`. The provider uses Terraform Plugin Framework v1.19.0 and requires Go 1.25.8 or newer. No Git repository has been initialized by the agent.
 
-`main.go` serves the provider. `internal/client/` contains HTTP transport and pagination; `internal/provider/` contains configuration, declarative API/schema specifications, lifecycle handling, data sources, and colocated tests. `examples/` contains Terraform examples and import commands; `docs/` contains generated reference pages and lifecycle guidance. `cmd/` contains example/schema generators, and the separate `tools/` Go module pins tfplugindocs. `.github/workflows/` contains CI, while `.goreleaser.yml` configures draft release artifacts.
+`main.go` serves the provider. `internal/client/` contains HTTP transport and pagination; `internal/provider/` contains configuration, declarative API/schema specifications, lifecycle handling, data sources, and colocated tests. `examples/` contains Terraform examples and import commands; `docs/` contains generated reference pages and lifecycle guidance. `cmd/` contains example/schema generators and the API coverage checker, and the separate `tools/` Go module pins tfplugindocs. `.github/workflows/` contains CI, while `.goreleaser.yml` configures draft release artifacts.
 
 ## Build, Test, and Development Commands
 
@@ -14,6 +14,7 @@ Development commands:
 - `go test ./...`: run package tests.
 - `go vet ./...`: check for common correctness issues.
 - `gofmt -w .`: format Go source files.
+- `go run ./cmd/check-api-coverage` (or `make api-coverage`): compare provider API usage with Merge's published OpenAPI spec. It needs network access, so it is not part of `go test`. Run it before releases; exit status 1 lists uncovered operations, unexposed filters or body fields, and stale exclusions. Record deliberate omissions with a reason in `cmd/check-api-coverage/main.go`, and keep `internal/provider/coverage.go` in sync with request logic in `resource.go` and `data_source.go`.
 
 Terraform CLI 1.13 or newer is required for fixture lifecycle tests. Generate examples and docs from the root with `make generate`, or run `go generate -tags generate .` inside `tools/`. Generation exports protocol schemas directly to avoid temporary provider-installation failures on Windows. Build a local plugin with `go build -o bin/terraform-provider-mergeah.exe .`; README.md describes dev_overrides. If Windows denies access to the shared Go build cache, use `$env:GOCACHE = "$PWD\.cache\go-build"`. GNUmakefile supplies build, test, vet, and generate targets.
 
