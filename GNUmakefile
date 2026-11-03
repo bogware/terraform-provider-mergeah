@@ -1,24 +1,13 @@
-default: fmt lint install generate
+default: build
 
 build:
-	go build -v ./...
-
-install: build
-	go install -v ./...
-
-lint:
-	golangci-lint run
-
-generate:
-	cd tools; go generate ./...
-
-fmt:
-	gofmt -s -w -e .
+	go build ./...
 
 test:
-	go test -v -cover -timeout=120s -parallel=10 ./...
+	go test ./...
 
-testacc:
-	TF_ACC=1 go test -v -cover -timeout 120m ./...
+vet:
+	go vet ./...
 
-.PHONY: fmt lint test testacc build install generate
+generate:
+	cd tools && go generate -tags generate .

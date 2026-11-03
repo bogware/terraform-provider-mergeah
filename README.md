@@ -1,64 +1,123 @@
-# Terraform Provider Scaffolding (Terraform Plugin Framework)
+# Terraform Provider Mergeah
 
-_This template repository is built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework). The template repository built on the [Terraform Plugin SDK](https://github.com/hashicorp/terraform-plugin-sdk) can be found at [terraform-provider-scaffolding](https://github.com/hashicorp/terraform-provider-scaffolding). See [Which SDK Should I Use?](https://developer.hashicorp.com/terraform/plugin/framework-benefits) in the Terraform documentation for additional information._
+Terraform Plugin Framework provider for the [Merge Agent Handler management API](https://docs.merge.dev/merge-agent-handler/agent-handler).
 
-This repository is a *template* for a [Terraform](https://www.terraform.io) provider. It is intended as a starting point for creating Terraform providers, containing:
+Provider source: `bogware/mergeah`. Go module: `github.com/bogware/terraform-provider-mergeah`.
 
-- A resource and a data source (`internal/provider/`),
-- Examples (`examples/`) and generated documentation (`docs/`),
-- Miscellaneous meta files.
+## Configuration
 
-These files contain boilerplate code that you will need to edit to create your own Terraform provider. Tutorials for creating Terraform providers can be found on the [HashiCorp Developer](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework) platform. _Terraform Plugin Framework specific guides are titled accordingly._
+```hcl
+terraform {
+  required_providers {
+    mergeah = {
+      source = "bogware/mergeah"
+    }
+  }
+}
 
-Please see the [GitHub template repository documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) for how to create a new repository from this template on GitHub.
+# Set MERGEAH_API_KEY in the environment.
+provider "mergeah" {
+  api_url = "https://ah-api.merge.dev/api/v1"
+}
 
-Once you've written your provider, you'll want to [publish it on the Terraform Registry](https://developer.hashicorp.com/terraform/registry/providers/publishing) so that others can use it.
+resource "mergeah_tool_pack" "support" {
+  name        = "Support"
+  description = "Tools available to the support agent"
+}
 
-## Requirements
+resource "mergeah_tool_pack_connectors" "support" {
+  tool_pack_id = mergeah_tool_pack.support.id
+  connectors = [{
+    slug       = "linear"
+    auth_scope = "INDIVIDUAL"
+    tool_names = ["list_issues"]
+  }]
+}
 
-- [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.24
+data "mergeah_connector" "linear" {
+  slug                 = "linear"
+  include_tool_details = true
+}
 
-## Building the Provider
-
-1. Clone the repository
-1. Enter the repository directory
-1. Build the provider using the Go `install` command:
-
-```shell
-go install
+locals {
+  linear_connector = jsondecode(data.mergeah_connector.linear.response_json)
+}
 ```
 
-## Adding Dependencies
+The access key needs management permissions. `api_key` overrides `MERGEAH_API_KEY`; `api_url` overrides `MERGEAH_API_URL`. EU deployments use `https://ah-api-eu.merge.dev/api/v1`. Test and production keys address separate environments.
 
-This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
-Please see the Go documentation for the most up to date information about using Go modules.
+API URLs must use HTTPS. HTTP is accepted only for literal loopback IP addresses, such as `127.0.0.1` or `::1`, for local fixtures.
 
-To add a new dependency `github.com/author/dependency` to your Terraform provider:
+The provider has not been published. Use a local development override until a signed release is available.
 
-```shell
-go get github.com/author/dependency
-go mod tidy
+## Coverage
+
+Fourteen resources cover Tool Packs, authoritative and individual connector membership, Registered Users, OAuth application credentials, access keys, remote MCP connectors, connector and Tool Pack tool description overrides, organization and Tool Pack custom regex rules, organization and Tool Pack standard entity settings, and connection exclusions. Thirty data sources cover detail/list endpoints, connector discovery, security rules, usage, audit events, and API/tool logs. See [API coverage and lifecycle behavior](docs/guides/coverage.md).
+
+Use `mergeah_tool_pack_connector` when separate resources or modules should own individual connectors. Each resource manages one `tool_pack_id`/`slug` pair and detaches only that connector on destroy. Do not use it alongside `mergeah_tool_pack_connectors` for the same Tool Pack, because the latter owns the entire list. For example, as an alternative to the membership resource above:
+
+```hcl
+resource "mergeah_tool_pack_connector" "linear" {
+  tool_pack_id = mergeah_tool_pack.support.id
+  slug         = "linear"
+  auth_scope   = "INDIVIDUAL"
+  tool_names   = ["list_issues"]
+}
 ```
 
-Then commit the changes to `go.mod` and `go.sum`.
+Import existing membership with `terraform import mergeah_tool_pack_connector.linear 'TOOL_PACK_ID/linear'`. An omitted `tool_names` enables all tools for new membership and preserves the selection for existing membership. Removing `tool_names` from configuration does not reset the selection; provide the desired tool names explicitly. An empty selection is rejected because Merge interprets it as removal.
 
-## Using the Provider
+Data sources expose API records through sensitive `response_json`. Use `jsondecode` to access their fields. Collections return a JSON array with all pages aggregated; `query` accepts additional documented API filters. Enterprise log endpoints require the corresponding Merge plan.
 
-Fill this in for each provider
+## Development
 
-## Developing the Provider
+Requires Go 1.25.8 or newer and Terraform CLI 1.13 or newer. The module follows the supplied HashiCorp framework scaffolding and uses Terraform Plugin Framework v1.19.0.
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
-
-To compile the provider, run `go install`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
-
-To generate or update documentation, run `make generate`.
-
-In order to run the full suite of Acceptance tests, run `make testacc`.
-
-*Note:* Acceptance tests create real resources, and often cost money to run.
-
-```shell
-make testacc
+```powershell
+go build ./...
+go test ./...
+go vet ./...
+gofmt -w main.go internal
+Push-Location tools
+go generate -tags generate .
+Pop-Location
 ```
+
+Default tests use local HTTP fixtures, including Terraform CLI lifecycle tests. They require no Merge credentials, make no live Merge changes, and incur no Merge costs. The test harness uses the installed Terraform CLI; set `TF_ACC_TERRAFORM_PATH` if it is not on PATH. A separate, opt-in [live acceptance suite](docs/guides/live-testing.md) is prepared for a dedicated test key; it is excluded from default builds and CI. It has not been run against Merge.
+
+If Windows denies access to an older Go build cache, set a project-local cache before running Go commands:
+
+```powershell
+$env:GOCACHE = "$PWD\.cache\go-build"
+```
+
+Build the local plugin:
+
+```powershell
+go build -o bin/terraform-provider-mergeah.exe .
+```
+
+Set `TF_CLI_CONFIG_FILE` to an absolute path to a local CLI configuration file containing:
+
+```hcl
+provider_installation {
+  dev_overrides {
+    "bogware/mergeah" = "C:/BogWare/terraform-provider-mergeah/bin"
+  }
+  direct {}
+}
+```
+
+Run `terraform plan` and `terraform apply` directly with development overrides. `terraform init` attempts registry installation and is unnecessary for this provider during local development. The directory in `dev_overrides` must contain the executable built above.
+
+## State and lifecycle
+
+Secrets are marked sensitive but are still stored in Terraform state. Protect the state backend. Never commit API keys, `.tfvars`, or state files. Secret fields that Merge does not return cannot be checked for remote drift. Imported access keys cannot recover their original secrets.
+
+Destroying organization standard entity settings or connection exclusions leaves the remote settings unchanged, as requested. Destroying a Tool Pack standard entity override restores inheritance; destroying authoritative connector membership detaches all connectors. Access key and remote connector changes require replacement. Regex rule names are immutable.
+
+`inbound_action` is retained from configuration when Merge omits it in read responses. Import cannot recover that field, and drift cannot be detected until the API returns it. Import existing Registered Users rather than relying on the create endpoint's idempotent adoption behavior.
+
+For application credentials, `oauth2_scopes_override` retains its configured string when Merge returns null or omits the field. Merge normalizes overrides equal to connector defaults to null, so Terraform cannot distinguish this from someone clearing the override remotely. A different non-null scope string is still detected as drift. Removing the override in configuration sends null on update; an empty string also requests clearing according to the API.
+
+Writes are never automatically retried because Merge provides no general idempotency key. Read requests retry rate limits and server errors with bounded backoff, honoring `Retry-After`. Pagination links must remain within the configured API base, and redirects are rejected to avoid forwarding authentication unexpectedly.
