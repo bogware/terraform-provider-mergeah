@@ -1,4 +1,4 @@
-## 0.1.0 (Unreleased)
+## 0.1.0 (November 3, 2026)
 
 Initial release of the Merge Agent Handler provider. Fixture tests cover every resource and data source; live validation against the Merge API is still in progress, so behavior may change before 1.0.
 

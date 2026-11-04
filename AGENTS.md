@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-The Go module is `github.com/bogware/terraform-provider-mergeah`, with Terraform source address `bogware/mergeah`. The provider uses Terraform Plugin Framework v1.19.0 and requires Go 1.25.8 or newer. No Git repository has been initialized by the agent.
+The Go module is `github.com/bogware/terraform-provider-mergeah`, with Terraform source address `bogware/mergeah`. The provider uses Terraform Plugin Framework v1.19.0 and requires Go 1.25.8 or newer.
 
 `main.go` serves the provider. `internal/client/` contains HTTP transport and pagination; `internal/provider/` contains configuration, declarative API/schema specifications, lifecycle handling, data sources, and colocated tests. `examples/` contains Terraform examples and import commands; `docs/` contains generated reference pages and lifecycle guidance. `cmd/` contains example/schema generators and the API coverage checker, and the separate `tools/` Go module pins tfplugindocs. `.github/workflows/` contains CI, the weekly API coverage check, and the release workflow; `.goreleaser.yml` configures signed release artifacts for the Terraform Registry.
 
@@ -32,7 +32,7 @@ Use Go's `testing` package and name tests `TestBehavior` in `*_test.go` files. T
 
 ## Commit & Pull Request Guidelines
 
-No Git history is available to establish a commit convention. Use concise, imperative commit subjects such as `Add provider configuration schema`. Pull requests should describe the change, link relevant issues, and list validation commands and results. Include configuration examples for user-facing changes.
+Use concise, imperative commit subjects such as `Add provider configuration schema`. Pull requests should describe the change, link relevant issues, and list validation commands and results. Include configuration examples for user-facing changes.
 
 ## Security & Configuration
 
