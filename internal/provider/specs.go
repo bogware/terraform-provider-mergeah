@@ -43,8 +43,15 @@ func number(name string, required bool) field {
 	f.Type = types.Float64Type
 	return f
 }
-func immutable(f field) field              { f.Replace = true; return f }
-func allowEmpty(f field) field             { f.AllowEmpty = true; return f }
+func immutable(f field) field  { f.Replace = true; return f }
+func allowEmpty(f field) field { f.AllowEmpty = true; return f }
+
+// stable applies UseStateForUnknown. Use it only for computed values that
+// never change after create (IDs, created_at, is_test, retained keys).
+// Values Merge may change on update, such as modified_at, description,
+// detection_method and authenticated_connectors, must stay unknown in the
+// plan; marking them stable causes "Provider produced inconsistent result
+// after apply". See HashiCorp's plan modification guidance.
 func stable(f field) field                 { f.Stable = true; return f }
 func local(f field) field                  { f.Local = true; return f }
 func secret(f field) field                 { f.Sensitive = true; f.Retain = true; return f }
@@ -69,6 +76,8 @@ func fieldTypes(fields []field) map[string]attr.Type {
 	}
 	return m
 }
+
+// timestamps leaves modified_at unstable on purpose; see stable.
 func timestamps() []field {
 	return []field{stable(computed("created_at", types.StringType)), computed("modified_at", types.StringType)}
 }
